@@ -1,0 +1,55 @@
+[
+    {
+      "english_command": "Create a variable x and set it to 10.",
+      "python_code": "x = 10"
+    },
+    {
+      "english_command": "Add 5 and 7 and store the result in sum_result.",
+      "python_code": "sum_result = 5 + 7"
+    },
+    {
+      "english_command": "Create a list of even numbers from 2 to 10.",
+      "python_code": "even_numbers = [2, 4, 6, 8, 10]"
+    },
+    {
+      "english_command": "Print 'Hello, World!' on the screen.",
+      "python_code": "print('Hello, World!')"
+    },
+    {
+      "english_command": "Repeat 'Hello' 3 times and print each time.",
+      "python_code": "for _ in range(3): print('Hello')"
+    },
+    {
+      "english_command": "Check if a number x is greater than 10 and print 'Big' if true.",
+      "python_code": "if x > 10: print('Big')"
+    },
+    {
+      "english_command": "Create a function that multiplies two numbers.",
+      "python_code": "def multiply(a, b): return a * b"
+    },
+    {
+      "english_command": "Read the contents of 'data.txt'.",
+      "python_code": "with open('data.txt', 'r') as file: content = file.read()"
+    },
+    {
+      "english_command": "Write 'Hello, File!' into a file named 'output.txt'.",
+      "python_code": "with open('output.txt', 'w') as file: file.write('Hello, File!')"
+    },
+    {
+      "english_command": "Create a dictionary with keys 'name' and 'age', and values 'Alice' and 25.",
+      "python_code": "person = {'name': 'Alice', 'age': 25}"
+    },
+    {
+      "english_command": "Create a while loop that runs as long as x is less than 10.",
+      "python_code": "while x < 10:\n    x += 1"
+    },
+    {
+      "english_command": "Define a class called 'Car' with a method 'drive' that prints 'Vroom!'.",
+      "python_code": "class Car:\n    def drive(self):\n        print('Vroom!')"
+    },
+    {
+      "english_command": "Sort a list of numbers in ascending order.",
+      "python_code": "numbers = [5, 3, 8, 1]\nnumbers.sort()"
+    }
+  ]
+  

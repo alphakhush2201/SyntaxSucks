@@ -1,15 +1,44 @@
-import { useState } from 'react';
-import { Code2, Play, Sparkles, Terminal, Loader2, Save, Copy, Trash2, History } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Code2, Play, Terminal, Loader2, Save, Copy, Trash2, History, BookOpen } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { Toaster, toast } from 'react-hot-toast';
+import LoadingScreen from './components/LoadingScreen';
+import Documentation from './components/Documentation';
+import About from './components/About';
+import SignIn from './components/SignIn';
+import SignUp from './components/SignUp';
 
 function App() {
   const [englishInput, setEnglishInput] = useState('');
   const [pythonOutput, setPythonOutput] = useState('# Your Python code will appear here');
   const [isLoading, setIsLoading] = useState(false);
   const [output, setOutput] = useState('');
-  const [activeTab, setActiveTab] = useState('code'); // 'code' or 'output'
+  const [activeTab, setActiveTab] = useState('code');
   const [history, setHistory] = useState([]);
+  const [showLoadingScreen, setShowLoadingScreen] = useState(true);
+  const [showDocumentation, setShowDocumentation] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
+  const [showSignUp, setShowSignUp] = useState(false);
+  
+  const fetchHistory = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:8000/history');
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      const data = await response.json();
+      const transformedHistory = data.map(item => ({
+        input: item.instructions,
+        output: item.python_code,
+        timestamp: item.created_at
+      }));
+      setHistory(transformedHistory);
+    } catch (error) {
+      console.error('Failed to fetch history:', error);
+      toast.error('Failed to load history');
+    }
+  };
   const [showHistory, setShowHistory] = useState(false);
 
   const handleConvert = async () => {
@@ -17,11 +46,20 @@ function App() {
     
     setIsLoading(true);
     try {
-      // TODO: Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const generatedCode = `def example():
-    print("Hello, World!")
-    return True`;
+      const response = await fetch('http://127.0.0.1:8000/convert', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ instructions: englishInput }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const generatedCode = data.python_code;
       
       setPythonOutput(generatedCode);
       setHistory(prev => [...prev, {
@@ -44,13 +82,29 @@ function App() {
     setIsLoading(true);
     setActiveTab('output');
     try {
-      // TODO: Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setOutput('Hello, World!\nTrue');
+      const response = await fetch('http://127.0.0.1:8000/run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ python_code: pythonOutput }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      setOutput(data.output);
       toast.success('Code executed successfully!');
     } catch (error) {
       console.error('Execution failed:', error);
-      setOutput('Error: Failed to execute code');
+      setOutput(`Error: ${error.message}`);
       toast.error('Failed to execute code. Please try again.');
     } finally {
       setIsLoading(false);
@@ -91,26 +145,62 @@ function App() {
     toast('Loaded from history', { icon: '📜' });
   };
 
+  const handleLoadingComplete = () => {
+    setShowLoadingScreen(false);
+  };
+
+  // Event listener for opening SignUp from SignIn
+  useEffect(() => {
+    const handleOpenSignUp = () => {
+      setShowSignUp(true);
+    };
+    
+    window.addEventListener('openSignUp', handleOpenSignUp);
+    
+    return () => {
+      window.removeEventListener('openSignUp', handleOpenSignUp);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white">
-      <Toaster position="top-right" />
-      
-      <header className="border-b border-gray-700 bg-gray-900/50 backdrop-blur-sm fixed top-0 w-full z-10">
+      {showLoadingScreen ? (
+        <LoadingScreen onLoadingComplete={handleLoadingComplete} />
+      ) : (
+        <>
+          <Toaster position="top-right" />
+          
+          <header className="border-b border-gray-700 bg-gray-900/50 backdrop-blur-sm fixed top-0 w-full z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Sparkles className="w-8 h-8 text-blue-400" />
-              <h1 className="text-xl font-bold">EngPy</h1>
+              <img src="/images/logo.svg" alt="SyntaxSucks Logo" className="w-10 h-10" />
+              <h1 className="text-xl font-bold">SyntaxSucks</h1>
             </div>
             <nav className="flex items-center space-x-4">
               <button
-                onClick={() => setShowHistory(!showHistory)}
+                onClick={() => {
+                  if (!showHistory) {
+                    fetchHistory();
+                  }
+                  setShowHistory(!showHistory);
+                }}
                 className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors flex items-center space-x-2"
               >
                 <History className="w-4 h-4" />
                 <span>History</span>
               </button>
-              <button className="px-4 py-2 bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors">
+              <button
+                onClick={() => setShowDocumentation(true)}
+                className="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors flex items-center space-x-2"
+              >
+                <BookOpen className="w-4 h-4" />
+                <span>Documentation</span>
+              </button>
+              <button 
+                onClick={() => setShowSignIn(true)}
+                className="px-4 py-2 bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
+              >
                 Sign In
               </button>
             </nav>
@@ -120,7 +210,6 @@ function App() {
 
       <main className="container mx-auto px-4 pt-24 pb-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* English Input Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -167,6 +256,10 @@ function App() {
           {/* Python Output Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Code2 className="w-5 h-5 text-green-400" />
+                <h2 className="text-lg font-semibold">Python Code</h2>
+              </div>
               <div className="flex items-center space-x-4">
                 <button
                   onClick={() => setActiveTab('code')}
@@ -248,15 +341,15 @@ function App() {
 
         {/* History Panel */}
         {showHistory && (
-          <div className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-auto">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">Conversion History</h2>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+              <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+                <h3 className="text-lg font-semibold">History</h3>
                 <button
                   onClick={() => setShowHistory(false)}
                   className="text-gray-400 hover:text-white"
                 >
-                  ✕
+                  &times;
                 </button>
               </div>
               {history.length === 0 ? (
@@ -280,7 +373,52 @@ function App() {
             </div>
           </div>
         )}
+
+        {/* Documentation Panel */}
+        {showDocumentation && (
+          <Documentation onClose={() => setShowDocumentation(false)} />
+        )}
+
+        {/* About Panel */}
+        {showAbout && (
+          <About onClose={() => setShowAbout(false)} />
+        )}
+
+        {/* Sign In Panel */}
+        {showSignIn && (
+          <SignIn onClose={() => {
+            setShowSignIn(false);
+          }} />
+        )}
+        
+        {/* Sign Up Panel */}
+        {showSignUp && (
+          <SignUp onClose={() => setShowSignUp(false)} />
+        )}
       </main>
+
+      <footer className="border-t border-gray-700 py-6">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col items-center justify-center space-y-3">
+            <div className="flex items-center">
+              <img src="/images/logo.svg" alt="SyntaxSucks Logo" className="w-8 h-8 mr-2" />
+              <p className="text-gray-400 text-sm">
+                &copy; {new Date().getFullYear()} SyntaxSucks. All rights reserved.
+              </p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button 
+                onClick={() => setShowAbout(true)} 
+                className="text-gray-400 text-sm hover:text-blue-400 transition-colors bg-transparent border-none cursor-pointer"
+              >
+                About SyntaxSucks
+              </button>
+            </div>
+          </div>
+        </div>
+      </footer>
+        </>
+      )}
     </div>
   );
 }
