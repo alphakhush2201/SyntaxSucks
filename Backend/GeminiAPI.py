@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import requests
 
 # Define a completely fallback implementation that doesn't depend on the Google API
 def convert_to_python(instruction):
@@ -13,39 +14,7 @@ def convert_to_python(instruction):
         api_key = os.environ.get("GEMINI_API_KEY", "")
         if not api_key:
             return f"# Error: GEMINI_API_KEY environment variable not set\n# Your instruction: {instruction}"
-        
-        # Configure Gemini API
-        genai.configure(api_key=api_key)
-        
-        # Try to use Gemini 2.0 Flash specifically
-        try:
-            # Try to list models first to check if gemini-2.0-flash is available
-            models = genai.list_models()
-            model_names = [model.name for model in models]
-            print(f"Available Gemini models: {model_names}")
             
-            # Look for gemini-2.0-flash or similar
-            flash_models = [m for m in model_names if "flash" in m.lower()]
-            if flash_models:
-                # Use the first available flash model (preferably 2.0)
-                gemini_2_flash = [m for m in flash_models if "2.0" in m or "2-0" in m]
-                if gemini_2_flash:
-                    model_name = gemini_2_flash[0].replace("models/", "")
-                else:
-                    model_name = flash_models[0].replace("models/", "")
-            else:
-                # Fallback to gemini-2.0-flash even if not in list (might work anyway)
-                model_name = "gemini-2.0-flash"
-            
-            print(f"Using Gemini model: {model_name}")
-        except Exception as e:
-            print(f"Error listing models: {e}")
-            # Default to gemini-2.0-flash if listing models fails
-            model_name = "gemini-2.0-flash"
-        
-        # Initialize model with the selected name
-        model = genai.GenerativeModel(model_name)
-        
         # Load examples from dataset
         examples = load_dataset()
         
@@ -59,24 +28,61 @@ def convert_to_python(instruction):
         Return only the Python code without any explanations or markdown formatting.
         """
         
-        # Send request with explicit generation config
-        response = model.generate_content(
-            prompt,
-            generation_config={
-                "temperature": 0.2,
-                "top_p": 0.8,
-                "top_k": 40,
-                "max_output_tokens": 1024,
-            }
-        )
-        
-        # Clean up the response
-        if hasattr(response, 'text'):
+        # Try with simplified approach first - don't overcomplicate with model selection
+        try:
+            # Configure Gemini API
+            genai.configure(api_key=api_key)
+            # Use a model we know exists in the API
+            model = genai.GenerativeModel("gemini-pro")
+            
+            # Generate content with simple config
+            response = model.generate_content(prompt)
             code = response.text.strip()
-        else:
-            # Handle different response formats
-            content = getattr(response, 'parts', [response])[0]
-            code = str(content).strip()
+            
+            # If we get here, it worked
+            print("Successfully used gemini-pro model")
+            
+        except Exception as e:
+            print(f"First approach failed: {e}")
+            # Fall back to alternative model name
+            try:
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel("models/gemini-pro")
+                response = model.generate_content(prompt)
+                code = response.text.strip()
+                print("Successfully used models/gemini-pro model")
+                
+            except Exception as e:
+                print(f"Second approach failed: {e}")
+                # Last resort - Fall back to direct HTTP request to the API
+                try:
+                    print("Trying direct HTTP API call")
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"
+                    headers = {'Content-Type': 'application/json'}
+                    payload = {
+                        "contents": [{
+                            "parts": [{"text": prompt}]
+                        }]
+                    }
+                    
+                    response = requests.post(url, headers=headers, json=payload)
+                    response.raise_for_status()  # Raise exception for HTTP errors
+                    
+                    data = response.json()
+                    code = data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
+                    if not code:
+                        raise ValueError("No text in response")
+                        
+                    print("Successfully used direct HTTP API")
+                except Exception as direct_error:
+                    print(f"Direct API call failed: {direct_error}")
+                    # As a last resort, return a simple code example
+                    return f"""# Error: All API approaches failed
+# Your instruction was: {instruction}
+
+print("Hello, World!")
+print("Sorry, the AI code generation service is currently unavailable.")
+"""
         
         # Remove markdown code block formatting if present
         if code.startswith("```python") and code.endswith("```"):
@@ -89,10 +95,12 @@ def convert_to_python(instruction):
     except ImportError as e:
         print(f"ImportError: {e}")
         # Fallback to simple code generation when Google API is not available
-        return f"""# Simple code generated for: {instruction}
+        return f"""# ImportError: Google GenerativeAI package not available
+# Your instruction: {instruction}
+
 print("Processing: {instruction}")
 
-# This is a fallback implementation because the AI service is not available
+# This is a fallback implementation
 def process_instruction():
     print("Your instruction would be processed here.")
     return "Result would be here"
@@ -101,7 +109,7 @@ result = process_instruction()
 print(result)
 """
     except Exception as e:
-        print(f"Error in convert_to_python: {e}")
+        print(f"Critical error in convert_to_python: {e}")
         return f"# Error generating code: {str(e)}\n# Your instruction: {instruction}"
 
 def load_dataset():
