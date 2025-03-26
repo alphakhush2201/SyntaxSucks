@@ -17,32 +17,31 @@ def convert_to_python(instruction):
         # Configure Gemini API
         genai.configure(api_key=api_key)
         
-        # Get available models
+        # Try to use Gemini 2.0 Flash specifically
         try:
-            # Try to list models first to log what's available
+            # Try to list models first to check if gemini-2.0-flash is available
             models = genai.list_models()
             model_names = [model.name for model in models]
             print(f"Available Gemini models: {model_names}")
             
-            # Choose the best available model
-            if "models/gemini-1.5-pro" in model_names:
-                model_name = "gemini-1.5-pro"
-            elif "models/gemini-1.0-pro" in model_names:
-                model_name = "gemini-1.0-pro"
-            else:
-                # Use latest available model that contains "pro"
-                pro_models = [m for m in model_names if "pro" in m.lower()]
-                if pro_models:
-                    # Remove "models/" prefix if present
-                    model_name = pro_models[0].replace("models/", "")
+            # Look for gemini-2.0-flash or similar
+            flash_models = [m for m in model_names if "flash" in m.lower()]
+            if flash_models:
+                # Use the first available flash model (preferably 2.0)
+                gemini_2_flash = [m for m in flash_models if "2.0" in m or "2-0" in m]
+                if gemini_2_flash:
+                    model_name = gemini_2_flash[0].replace("models/", "")
                 else:
-                    model_name = "gemini-pro"  # Default fallback
+                    model_name = flash_models[0].replace("models/", "")
+            else:
+                # Fallback to gemini-2.0-flash even if not in list (might work anyway)
+                model_name = "gemini-2.0-flash"
             
             print(f"Using Gemini model: {model_name}")
         except Exception as e:
             print(f"Error listing models: {e}")
-            # Default to gemini-pro if listing models fails
-            model_name = "gemini-pro"
+            # Default to gemini-2.0-flash if listing models fails
+            model_name = "gemini-2.0-flash"
         
         # Initialize model with the selected name
         model = genai.GenerativeModel(model_name)
