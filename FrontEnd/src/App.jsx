@@ -10,6 +10,9 @@ import SignUp from './components/SignUp';
 import { useAuth } from './AuthContext';
 import { supabase } from './supabaseClient';
 
+// Get API URL from environment variables
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+
 function App() {
   const { user, isAuthenticated, signOut } = useAuth();
   const [englishInput, setEnglishInput] = useState('');
@@ -40,7 +43,7 @@ function App() {
         throw new Error('No authentication token found');
       }
       
-      const response = await fetch('http://127.0.0.1:8000/history', {
+      const response = await fetch(`${API_URL}/history`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -82,7 +85,7 @@ function App() {
         }
       }
       
-      const response = await fetch('http://127.0.0.1:8000/convert', {
+      const response = await fetch(`${API_URL}/convert`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({ instructions: englishInput }),
@@ -128,7 +131,7 @@ function App() {
         }
       }
       
-      const response = await fetch('http://127.0.0.1:8000/run', {
+      const response = await fetch(`${API_URL}/run`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({ python_code: pythonOutput }),
