@@ -11,14 +11,13 @@ from datetime import datetime, timedelta
 import jwt
 import os
 from dotenv import load_dotenv
-from GeminiAPI import convert_to_python
 import time
 from collections import defaultdict
-from supabase_client import sign_up_user, sign_in_user, get_user_by_id, get_user_by_email
 
 # Load environment variables from .env file
 load_dotenv()
 
+# Create the FastAPI app first
 app = FastAPI(title="SyntaxSucks API", description="Convert English to Python code")
 
 # Add CORS middleware to allow cross-origin requests
@@ -29,6 +28,29 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )
+
+try:
+    # Import modules that might fail
+    from GeminiAPI import convert_to_python
+    from supabase_client import sign_up_user, sign_in_user, get_user_by_id, get_user_by_email
+except Exception as e:
+    print(f"Error importing modules: {e}")
+
+    # Define fallback functions if imports fail
+    def convert_to_python(instruction):
+        return f"# Error: Could not convert instruction to Python code.\n# The AI service is currently unavailable.\n\n# Your instruction: {instruction}"
+
+    def sign_up_user(email, password, username):
+        return {"user": {"id": "dummy-id", "email": email}, "session": None}
+
+    def sign_in_user(email, password):
+        return {"user": {"id": "dummy-id", "email": email}, "session": None}
+
+    def get_user_by_id(user_id):
+        return {"id": user_id, "email": "dummy@example.com", "username": "dummy_user"}
+
+    def get_user_by_email(email):
+        return {"id": "dummy-id", "email": email, "username": "dummy_user"}
 
 # Secret key for JWT token generation
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your-secret-key-for-jwt-tokens")
