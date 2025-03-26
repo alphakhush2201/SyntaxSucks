@@ -2,8 +2,8 @@ import os
 from supabase import create_client
 
 # Supabase configuration
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://your-supabase-url.supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_ANON_KEY", "your-supabase-anon-key")
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://bdnopjgvogrlktgtuaci.supabase.co")
+SUPABASE_KEY = os.environ.get("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkbm9wamd2b2dybGt0Z3R1YWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MzY3MzUsImV4cCI6MjA1ODUxMjczNX0.cwgTTZQe53E8UBVK-7h7by5QQkQASU0ecOkxMPQ7RUI")
 
 # Initialize Supabase client
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)

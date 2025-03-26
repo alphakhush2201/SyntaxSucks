@@ -12,7 +12,7 @@ import jwt
 from GeminiAPI import convert_to_python
 import time
 from collections import defaultdict
-from supabase_client import sign_up_user, sign_in_user, get_user_by_id
+from supabase_client import sign_up_user, sign_in_user, get_user_by_id, get_user_by_email
 
 app = FastAPI(title="SyntaxSucks API", description="Convert English to Python code")
 
