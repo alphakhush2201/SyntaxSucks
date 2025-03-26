@@ -2,8 +2,9 @@ import json
 import os
 from google import genai
 
-# Initialize the Gemini client with API key
-client = genai.Client(api_key="AIzaSyAYwekcwKDIWO0lJivTkDEXVflGfgEekfI")
+# Initialize the Gemini client with API key from environment variable
+api_key = os.environ.get("GEMINI_API_KEY", "AIzaSyAYwekcwKDIWO0lJivTkDEXVflGfgEekfI")
+client = genai.Client(api_key=api_key)
 
 def load_dataset():
     """Load and format the dataset from dataset.json"""

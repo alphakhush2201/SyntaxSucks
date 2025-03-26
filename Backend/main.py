@@ -9,6 +9,7 @@ import contextlib
 import uuid
 from datetime import datetime, timedelta
 import jwt
+import os
 from GeminiAPI import convert_to_python
 import time
 from collections import defaultdict
@@ -26,7 +27,7 @@ app.add_middleware(
 )
 
 # Secret key for JWT token generation
-SECRET_KEY = "your-secret-key-for-jwt-tokens"
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your-secret-key-for-jwt-tokens")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
