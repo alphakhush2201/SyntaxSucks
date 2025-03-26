@@ -10,10 +10,14 @@ import uuid
 from datetime import datetime, timedelta
 import jwt
 import os
+from dotenv import load_dotenv
 from GeminiAPI import convert_to_python
 import time
 from collections import defaultdict
 from supabase_client import sign_up_user, sign_in_user, get_user_by_id, get_user_by_email
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = FastAPI(title="SyntaxSucks API", description="Convert English to Python code")
 
