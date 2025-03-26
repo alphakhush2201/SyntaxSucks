@@ -4,4 +4,5 @@ python-jose==3.3.0
 python-multipart==0.0.9
 google-generativeai==0.3.2
 pyjwt==2.8.0
+supabase==2.3.5
 # No additional dependencies needed for rate limiting as we're using built-in Python libraries

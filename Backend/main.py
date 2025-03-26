@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel, EmailStr
 from typing import List, Optional, Dict, Any
 import io
 import sys
@@ -11,6 +12,7 @@ import jwt
 from GeminiAPI import convert_to_python
 import time
 from collections import defaultdict
+from supabase_client import sign_up_user, sign_in_user, get_user_by_id
 
 app = FastAPI(title="SyntaxSucks API", description="Convert English to Python code")
 
@@ -54,6 +56,7 @@ class HistoryItem(BaseModel):
 class User(BaseModel):
     username: str
     password: str
+    email: EmailStr
 
 class UserInDB(User):
     hashed_password: str
@@ -115,7 +118,7 @@ class RateLimiter:
         return max(0, max_calls - len(request_store[identifier]))
 
 # Initialize rate limiter
-rate_limiter = RateLimiter(max_calls=50)
+rate_limiter = RateLimiter(anon_max_calls=50)
 
 # Helper functions for authentication
 def get_password_hash(password: str) -> str:
@@ -133,11 +136,34 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+# Set up OAuth2 password bearer for token authentication
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
 # Authentication dependency
-async def get_current_user(token: str = Depends(lambda: None)):
-    # This is a simplified version. In a real app, validate the JWT token
-    # and retrieve the user from the database
-    return None
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        # Decode JWT token
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        token_data = TokenData(username=username)
+    except jwt.JWTError:
+        raise credentials_exception
+    
+    # Get user from Supabase by email
+    try:
+        user = get_user_by_email(token_data.username)
+        if user is None:
+            raise credentials_exception
+        return user
+    except Exception:
+        raise credentials_exception
 
 # Rate limiting middleware
 async def check_rate_limit(request: Request):
@@ -229,40 +255,49 @@ async def get_history(rate_limit: None = Depends(check_rate_limit)):
 
 @app.post("/auth/signup")
 async def signup(user: User):
-    # Check if user already exists
-    if user.username in users_db:
+    try:
+        # Register user with Supabase
+        auth_response = sign_up_user(user.email, user.password, user.username)
+        
+        # Create access token
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.email}, expires_delta=access_token_expires
+        )
+        
+        return {"message": "User registered successfully", "access_token": access_token, "token_type": "bearer"}
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered"
+            detail=str(e)
         )
-    
-    # Create new user with hashed password
-    hashed_password = get_password_hash(user.password)
-    users_db[user.username] = UserInDB(
-        username=user.username,
-        hashed_password=hashed_password
-    )
-    
-    return {"message": "User registered successfully"}
 
 @app.post("/auth/login", response_model=Token)
-async def login(user: User):
-    # Check if user exists and password is correct
-    db_user = users_db.get(user.username)
-    if not db_user or not verify_password(user.password, db_user.hashed_password):
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    try:
+        # Sign in user with Supabase
+        auth_response = sign_in_user(form_data.username, form_data.password)
+        
+        if not auth_response.user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Create access token
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": form_data.username}, expires_delta=access_token_expires
+        )
+        
+        return Token(access_token=access_token, token_type="bearer")
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="Authentication failed",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
-    # Create access token
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-    
-    return Token(access_token=access_token, token_type="bearer")
 
 @app.get("/rate-limit-status")
 async def get_rate_limit_status(request: Request):

@@ -64,21 +64,24 @@ function SignUp({ onClose }) {
     setIsLoading(true);
     
     try {
-      // This will be replaced with actual backend API call later
-      console.log('Sign up data:', formData);
+      // Import the signUp function from supabaseClient
+      const { signUp } = await import('../supabaseClient');
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call Supabase signUp function
+      const data = await signUp(formData.email, formData.password, formData.name);
       
-      // Close the modal after successful sign up
-      onClose();
-      
-      // You would typically store auth token in localStorage here
-      // localStorage.setItem('authToken', response.token);
-      
+      if (data.user) {
+        // Store session in localStorage
+        localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
+        
+        // Close the modal after successful sign up
+        onClose();
+      } else {
+        throw new Error('Registration failed');
+      }
     } catch (error) {
       console.error('Sign up failed:', error);
-      setErrors({ form: 'Registration failed. Please try again.' });
+      setErrors({ form: error.message || 'Registration failed. Please try again.' });
     } finally {
       setIsLoading(false);
     }

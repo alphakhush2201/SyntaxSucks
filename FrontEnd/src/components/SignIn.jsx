@@ -52,21 +52,24 @@ function SignIn({ onClose }) {
     setIsLoading(true);
     
     try {
-      // This will be replaced with actual backend API call later
-      console.log('Sign in data:', formData);
+      // Import the signIn function from supabaseClient
+      const { signIn } = await import('../supabaseClient');
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call Supabase signIn function
+      const data = await signIn(formData.email, formData.password);
       
-      // Close the modal after successful sign in
-      onClose();
-      
-      // You would typically store auth token in localStorage here
-      // localStorage.setItem('authToken', response.token);
-      
+      if (data.user) {
+        // Store session in localStorage
+        localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
+        
+        // Close the modal after successful sign in
+        onClose();
+      } else {
+        throw new Error('Authentication failed');
+      }
     } catch (error) {
       console.error('Sign in failed:', error);
-      setErrors({ form: 'Invalid email or password. Please try again.' });
+      setErrors({ form: error.message || 'Invalid email or password. Please try again.' });
     } finally {
       setIsLoading(false);
     }
