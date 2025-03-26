@@ -14,8 +14,38 @@ def convert_to_python(instruction):
         if not api_key:
             return f"# Error: GEMINI_API_KEY environment variable not set\n# Your instruction: {instruction}"
         
+        # Configure Gemini API
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-pro')
+        
+        # Get available models
+        try:
+            # Try to list models first to log what's available
+            models = genai.list_models()
+            model_names = [model.name for model in models]
+            print(f"Available Gemini models: {model_names}")
+            
+            # Choose the best available model
+            if "models/gemini-1.5-pro" in model_names:
+                model_name = "gemini-1.5-pro"
+            elif "models/gemini-1.0-pro" in model_names:
+                model_name = "gemini-1.0-pro"
+            else:
+                # Use latest available model that contains "pro"
+                pro_models = [m for m in model_names if "pro" in m.lower()]
+                if pro_models:
+                    # Remove "models/" prefix if present
+                    model_name = pro_models[0].replace("models/", "")
+                else:
+                    model_name = "gemini-pro"  # Default fallback
+            
+            print(f"Using Gemini model: {model_name}")
+        except Exception as e:
+            print(f"Error listing models: {e}")
+            # Default to gemini-pro if listing models fails
+            model_name = "gemini-pro"
+        
+        # Initialize model with the selected name
+        model = genai.GenerativeModel(model_name)
         
         # Load examples from dataset
         examples = load_dataset()
@@ -30,11 +60,24 @@ def convert_to_python(instruction):
         Return only the Python code without any explanations or markdown formatting.
         """
         
-        # Send request
-        response = model.generate_content(prompt)
+        # Send request with explicit generation config
+        response = model.generate_content(
+            prompt,
+            generation_config={
+                "temperature": 0.2,
+                "top_p": 0.8,
+                "top_k": 40,
+                "max_output_tokens": 1024,
+            }
+        )
         
         # Clean up the response
-        code = response.text.strip()
+        if hasattr(response, 'text'):
+            code = response.text.strip()
+        else:
+            # Handle different response formats
+            content = getattr(response, 'parts', [response])[0]
+            code = str(content).strip()
         
         # Remove markdown code block formatting if present
         if code.startswith("```python") and code.endswith("```"):
@@ -44,7 +87,8 @@ def convert_to_python(instruction):
             
         return code
     
-    except ImportError:
+    except ImportError as e:
+        print(f"ImportError: {e}")
         # Fallback to simple code generation when Google API is not available
         return f"""# Simple code generated for: {instruction}
 print("Processing: {instruction}")
@@ -58,6 +102,7 @@ result = process_instruction()
 print(result)
 """
     except Exception as e:
+        print(f"Error in convert_to_python: {e}")
         return f"# Error generating code: {str(e)}\n# Your instruction: {instruction}"
 
 def load_dataset():
