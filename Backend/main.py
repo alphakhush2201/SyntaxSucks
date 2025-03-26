@@ -20,6 +20,25 @@ load_dotenv()
 # Create the FastAPI app first
 app = FastAPI(title="SyntaxSucks API", description="Convert English to Python code")
 
+# Add a root route to respond to requests at the root path
+@app.get("/")
+async def root():
+    return {
+        "message": "SyntaxSucks API is running",
+        "version": "1.0.0",
+        "endpoints": {
+            "POST /convert": "Convert English instructions to Python code",
+            "POST /run": "Execute Python code and return output",
+            "POST /auth/login": "Log in with email and password",
+            "POST /auth/signup": "Sign up with email, password, and username"
+        }
+    }
+
+# Add health check endpoint for monitoring
+@app.get("/healthz")
+async def health_check():
+    return {"status": "healthy"}
+
 # Add CORS middleware to allow cross-origin requests
 app.add_middleware(
     CORSMiddleware,
