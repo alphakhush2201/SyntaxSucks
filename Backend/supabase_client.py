@@ -1,12 +1,35 @@
 import os
-from supabase import create_client
+from supabase import create_client, Client
+import sys
 
 # Supabase configuration
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://bdnopjgvogrlktgtuaci.supabase.co")
 SUPABASE_KEY = os.environ.get("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkbm9wamd2b2dybGt0Z3R1YWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MzY3MzUsImV4cCI6MjA1ODUxMjczNX0.cwgTTZQe53E8UBVK-7h7by5QQkQASU0ecOkxMPQ7RUI")
 
-# Initialize Supabase client
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Initialize Supabase client with error handling
+try:
+    # Initialize with minimal options to avoid proxy issues
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY, options={
+        "schema": "public",
+        "headers": {"X-Client-Info": "supabase-py/2.3.5"},
+        "auto_refresh_token": True,
+    })
+except TypeError as e:
+    if "proxy" in str(e):
+        print("Error with proxy parameter in Supabase client. Trying alternative initialization.")
+        try:
+            from supabase import Client as SupabaseClient
+            # Fallback to direct initialization without proxy
+            supabase = SupabaseClient(SUPABASE_URL, SUPABASE_KEY)
+        except Exception as inner_e:
+            print(f"Failed to initialize Supabase client: {inner_e}")
+            sys.exit(1)
+    else:
+        print(f"Supabase initialization error: {e}")
+        sys.exit(1)
+except Exception as e:
+    print(f"Failed to initialize Supabase client: {e}")
+    sys.exit(1)
 
 # User management functions
 def sign_up_user(email, password, username):
