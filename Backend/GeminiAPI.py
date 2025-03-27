@@ -33,7 +33,7 @@ def convert_to_python(instruction):
             # Configure Gemini API
             genai.configure(api_key=api_key)
             # Use a model we know exists in the API
-            model = genai.GenerativeModel("gemini-pro")
+            model = genai.GenerativeModel("gemini-2.0-flash")
             
             # Generate content with simple config
             response = model.generate_content(prompt)
