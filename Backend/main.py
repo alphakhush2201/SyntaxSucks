@@ -324,38 +324,61 @@ def execute_java(code: str) -> tuple[str, str]:
             f.write(code)
         
         try:
-            # Check if Java is installed
-            version_process = subprocess.run(['java', '-version'], capture_output=True, text=True)
-            if version_process.returncode != 0:
-                return "", "Error: Java is not properly installed on the server"
+            # Check Java installation and environment
+            java_home = os.environ.get('JAVA_HOME', '')
+            path = os.environ.get('PATH', '')
+            
+            # Log environment information
+            print(f"JAVA_HOME: {java_home}")
+            print(f"PATH: {path}")
+            print("Checking Java installation...")
+            
+            # Check Java version
+            try:
+                version_process = subprocess.run(['java', '-version'], capture_output=True, text=True, check=True)
+                print(f"Java version output: {version_process.stderr}")  # Java outputs version to stderr
+            except subprocess.CalledProcessError as e:
+                return "", f"Error checking Java version: {e.stderr}"
+            except FileNotFoundError:
+                return "", "Error: Java not found. Please check Java installation."
 
-            # Compile the Java code with detailed error output
-            compile_process = subprocess.run(
-                ['javac', java_file],
-                capture_output=True,
-                text=True
-            )
+            # Compile the Java code
+            try:
+                compile_process = subprocess.run(
+                    ['javac', java_file],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                print(f"Compilation successful: {compile_process.stderr}")
+            except subprocess.CalledProcessError as e:
+                return "", f"Compilation error:\n{e.stderr}"
+            except FileNotFoundError:
+                return "", "Error: Java compiler (javac) not found. Please check JDK installation."
             
-            if compile_process.returncode != 0:
-                return "", f"Compilation error:\n{compile_process.stderr}"
+            # Run the compiled Java code
+            try:
+                run_process = subprocess.run(
+                    ['java', '-cp', temp_dir, class_name],
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                
+                if run_process.returncode != 0:
+                    return "", f"Runtime error:\n{run_process.stderr}"
+                
+                return run_process.stdout, run_process.stderr
+                
+            except subprocess.TimeoutExpired:
+                return "", "Error: Code execution timed out (limit: 10 seconds)"
+            except subprocess.CalledProcessError as e:
+                return "", f"Runtime error:\n{e.stderr}"
+            except Exception as e:
+                return "", f"Error running Java code: {str(e)}"
             
-            # Run the compiled Java code with timeout
-            run_process = subprocess.run(
-                ['java', '-cp', temp_dir, class_name],
-                capture_output=True,
-                text=True,
-                timeout=10  # 10 second timeout
-            )
-            
-            if run_process.returncode != 0:
-                return "", f"Runtime error:\n{run_process.stderr}"
-            
-            return run_process.stdout, run_process.stderr
-            
-        except subprocess.TimeoutExpired:
-            return "", "Error: Code execution timed out (limit: 10 seconds)"
         except Exception as e:
-            return "", f"Error executing Java code: {str(e)}\nMake sure Java is properly installed."
+            return "", f"Error executing Java code: {str(e)}\nJAVA_HOME: {java_home}\nPATH: {path}"
 
 def execute_cpp(code: str) -> tuple[str, str]:
     """Execute C++ code by creating a temporary file and compiling/running it"""
