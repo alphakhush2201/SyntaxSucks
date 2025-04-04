@@ -324,33 +324,38 @@ def execute_java(code: str) -> tuple[str, str]:
             f.write(code)
         
         try:
-            # Compile the Java code
-            compile_process = subprocess.Popen(
+            # Check if Java is installed
+            version_process = subprocess.run(['java', '-version'], capture_output=True, text=True)
+            if version_process.returncode != 0:
+                return "", "Error: Java is not properly installed on the server"
+
+            # Compile the Java code with detailed error output
+            compile_process = subprocess.run(
                 ['javac', java_file],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 text=True
             )
-            _, compile_error = compile_process.communicate()
             
             if compile_process.returncode != 0:
-                return "", f"Compilation error: {compile_error}"
+                return "", f"Compilation error:\n{compile_process.stderr}"
             
-            # Run the compiled Java code
-            run_process = subprocess.Popen(
+            # Run the compiled Java code with timeout
+            run_process = subprocess.run(
                 ['java', '-cp', temp_dir, class_name],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
+                capture_output=True,
+                text=True,
+                timeout=10  # 10 second timeout
             )
-            output, runtime_error = run_process.communicate()
             
-            if runtime_error:
-                return output, runtime_error
-            return output, ""
+            if run_process.returncode != 0:
+                return "", f"Runtime error:\n{run_process.stderr}"
             
+            return run_process.stdout, run_process.stderr
+            
+        except subprocess.TimeoutExpired:
+            return "", "Error: Code execution timed out (limit: 10 seconds)"
         except Exception as e:
-            return "", f"Error executing Java code: {str(e)}"
+            return "", f"Error executing Java code: {str(e)}\nMake sure Java is properly installed."
 
 def execute_cpp(code: str) -> tuple[str, str]:
     """Execute C++ code by creating a temporary file and compiling/running it"""
