@@ -11,7 +11,7 @@ import { useAuth } from './AuthContext';
 import { supabase } from './supabaseClient';
 
 // Get API URL from environment variables
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://syntaxsucks.onrender.com';
 
 // Supported languages
 const SUPPORTED_LANGUAGES = {

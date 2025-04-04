@@ -46,10 +46,10 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-# Add CORS middleware with specific configuration
+# Add CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Frontend URL
+    allow_origins=["https://syntaxsucks.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
