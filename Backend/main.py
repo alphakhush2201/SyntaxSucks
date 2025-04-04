@@ -26,6 +26,15 @@ app = FastAPI(
     description="Convert English to multiple programming languages"
 )
 
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://syntaxsucks.vercel.app"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Add a root route to respond to requests at the root path
 @app.get("/")
 async def root():
@@ -45,16 +54,6 @@ async def root():
 @app.get("/healthz")
 async def health_check():
     return {"status": "healthy"}
-
-# Add CORS middleware configuration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://syntaxsucks.vercel.app"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"]
-)
 
 # Import modules that might fail, with proper fallbacks
 try:
