@@ -13,12 +13,18 @@ import os
 from dotenv import load_dotenv
 import time
 from collections import defaultdict
+from GeminiAPI import convert_to_code, SUPPORTED_LANGUAGES
+import subprocess
+import tempfile
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Create the FastAPI app first
-app = FastAPI(title="SyntaxSucks API", description="Convert English to Python code")
+app = FastAPI(
+    title="SyntaxSucks API",
+    description="Convert English to multiple programming languages"
+)
 
 # Add a root route to respond to requests at the root path
 @app.get("/")
@@ -26,9 +32,10 @@ async def root():
     return {
         "message": "SyntaxSucks API is running",
         "version": "1.0.0",
+        "supported_languages": list(SUPPORTED_LANGUAGES.keys()),
         "endpoints": {
-            "POST /convert": "Convert English instructions to Python code",
-            "POST /run": "Execute Python code and return output",
+            "POST /convert": "Convert English instructions to code in specified language",
+            "POST /run": "Execute code and return output",
             "POST /auth/login": "Log in with email and password",
             "POST /auth/signup": "Sign up with email, password, and username"
         }
@@ -39,13 +46,14 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-# Add CORS middleware to allow cross-origin requests
+# Add CORS middleware with specific configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["http://localhost:5173"],  # Frontend URL
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # Import modules that might fail, with proper fallbacks
@@ -77,22 +85,27 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 # Model definitions
 class ConvertRequest(BaseModel):
     instructions: str
+    language: str = "python"  # Default to Python if not specified
 
 class ConvertResponse(BaseModel):
-    python_code: str
+    code: str
     instructions: str
+    language: str
 
 class RunRequest(BaseModel):
-    python_code: str
+    code: str
+    language: str = "python"  # Default to Python if not specified
 
 class RunResponse(BaseModel):
     output: str
     error: Optional[str] = None
+    language: str
 
 class HistoryItem(BaseModel):
     id: str
     instructions: str
-    python_code: str
+    code: str
+    language: str
     created_at: str
     output: Optional[str] = None
     error: Optional[str] = None
@@ -259,51 +272,190 @@ async def check_rate_limit(request: Request):
 
 @app.post("/convert", response_model=ConvertResponse)
 async def convert(request: ConvertRequest, rate_limit: None = Depends(check_rate_limit)):
-    # Use the Gemini API to convert English to Python code
-    python_code = convert_to_python(request.instructions)
+    if request.language not in SUPPORTED_LANGUAGES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported language. Supported languages are: {', '.join(SUPPORTED_LANGUAGES.keys())}"
+        )
     
-    # Create a history item
-    history_id = str(uuid.uuid4())
-    history_item = HistoryItem(
-        id=history_id,
-        instructions=request.instructions,
-        python_code=python_code,
-        created_at=datetime.utcnow().isoformat()
-    )
-    
-    # Store in history
-    history_db[history_id] = history_item
+    # Use the Gemini API to convert English to code
+    code = convert_to_code(request.instructions, request.language)
     
     return ConvertResponse(
-        python_code=python_code,
-        instructions=request.instructions
+        code=code,
+        instructions=request.instructions,
+        language=request.language
     )
+
+def execute_javascript(code: str) -> tuple[str, str]:
+    """Execute JavaScript code using Node.js"""
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as f:
+        f.write(code)
+        temp_file = f.name
+
+    try:
+        # Run the JavaScript code using Node.js
+        process = subprocess.Popen(
+            ['node', temp_file],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        output, error = process.communicate()
+        return output, error
+    finally:
+        os.unlink(temp_file)
+
+def execute_java(code: str) -> tuple[str, str]:
+    """Execute Java code by creating a temporary file and compiling/running it"""
+    # Extract the public class name from the code
+    import re
+    class_match = re.search(r'public\s+class\s+(\w+)', code)
+    if not class_match:
+        return "", "Error: No public class found in the code"
+    
+    class_name = class_match.group(1)
+    
+    # Create a temporary directory for Java files
+    with tempfile.TemporaryDirectory() as temp_dir:
+        java_file = os.path.join(temp_dir, f"{class_name}.java")
+        
+        # Write the code to a temporary file
+        with open(java_file, 'w') as f:
+            f.write(code)
+        
+        try:
+            # Compile the Java code
+            compile_process = subprocess.Popen(
+                ['javac', java_file],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            _, compile_error = compile_process.communicate()
+            
+            if compile_process.returncode != 0:
+                return "", f"Compilation error: {compile_error}"
+            
+            # Run the compiled Java code
+            run_process = subprocess.Popen(
+                ['java', '-cp', temp_dir, class_name],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            output, runtime_error = run_process.communicate()
+            
+            if runtime_error:
+                return output, runtime_error
+            return output, ""
+            
+        except Exception as e:
+            return "", f"Error executing Java code: {str(e)}"
+
+def execute_cpp(code: str) -> tuple[str, str]:
+    """Execute C++ code by creating a temporary file and compiling/running it"""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create temporary files for source and executable
+        cpp_file = os.path.join(temp_dir, "program.cpp")
+        exe_file = os.path.join(temp_dir, "program")
+        
+        # Write the code to a temporary file
+        with open(cpp_file, 'w') as f:
+            f.write(code)
+        
+        try:
+            # Compile the C++ code
+            compile_process = subprocess.Popen(
+                ['g++', cpp_file, '-o', exe_file],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            _, compile_error = compile_process.communicate()
+            
+            if compile_process.returncode != 0:
+                return "", f"Compilation error: {compile_error}"
+            
+            # Run the compiled executable
+            run_process = subprocess.Popen(
+                [exe_file],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            output, runtime_error = run_process.communicate()
+            
+            if runtime_error:
+                return output, runtime_error
+            return output, ""
+            
+        except Exception as e:
+            return "", f"Error executing C++ code: {str(e)}"
+
+def execute_ruby(code: str) -> tuple[str, str]:
+    """Execute Ruby code using the Ruby interpreter"""
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.rb', delete=False) as f:
+        f.write(code)
+        temp_file = f.name
+
+    try:
+        # Run the Ruby code
+        process = subprocess.Popen(
+            ['ruby', temp_file],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        output, error = process.communicate()
+        return output, error
+    finally:
+        os.unlink(temp_file)
 
 @app.post("/run", response_model=RunResponse)
 async def run_code(request: RunRequest, rate_limit: None = Depends(check_rate_limit)):
+    if request.language not in SUPPORTED_LANGUAGES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported language. Supported languages are: {', '.join(SUPPORTED_LANGUAGES.keys())}"
+        )
+    
     try:
-        # Capture stdout to get the output
-        stdout_buffer = io.StringIO()
-        stderr_buffer = io.StringIO()
+        if request.language == "python":
+            # Execute Python code using exec
+            output_buffer = io.StringIO()
+            error_buffer = io.StringIO()
+            
+            with contextlib.redirect_stdout(output_buffer), contextlib.redirect_stderr(error_buffer):
+                exec(request.code)
+            
+            output = output_buffer.getvalue()
+            error = error_buffer.getvalue()
         
-        # Create a safe execution environment
-        exec_globals = {}
+        elif request.language == "javascript":
+            output, error = execute_javascript(request.code)
         
-        # Redirect stdout and stderr
-        with contextlib.redirect_stdout(stdout_buffer), contextlib.redirect_stderr(stderr_buffer):
-            exec(request.python_code, exec_globals)
+        elif request.language == "java":
+            output, error = execute_java(request.code)
         
-        # Get the output
-        output = stdout_buffer.getvalue()
-        if not output and 'output' in exec_globals:
-            # If no stdout but 'output' variable exists, use that
-            output = str(exec_globals['output'])
-        elif not output:
-            output = "Code executed successfully (no output)"
+        elif request.language == "cpp":
+            output, error = execute_cpp(request.code)
         
-        return RunResponse(output=output)
+        elif request.language == "ruby":
+            output, error = execute_ruby(request.code)
+        
+        return RunResponse(
+            output=output,
+            error=error if error else None,
+            language=request.language
+        )
+    
     except Exception as e:
-        return RunResponse(output='', error=str(e))
+        return RunResponse(
+            output="",
+            error=str(e),
+            language=request.language
+        )
 
 @app.get("/history", response_model=List[HistoryItem])
 async def get_history(rate_limit: None = Depends(check_rate_limit)):

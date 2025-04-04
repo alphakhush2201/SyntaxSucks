@@ -1,11 +1,25 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Supabase configuration
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL || 'https://your-supabase-url.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY || 'your-supabase-anon-key';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Initialize the Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Supabase configuration is missing. Authentication features will be disabled.');
+}
+
+// Initialize the Supabase client with a mock implementation if configuration is missing
+export const supabase = supabaseUrl && supabaseAnonKey
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : {
+      auth: {
+        signUp: async () => ({ data: null, error: new Error('Supabase not configured') }),
+        signInWithPassword: async () => ({ data: null, error: new Error('Supabase not configured') }),
+        signOut: async () => ({ error: new Error('Supabase not configured') }),
+        getUser: async () => ({ data: { user: null }, error: null }),
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      },
+    };
 
 // Authentication helper functions
 export const signUp = async (email, password, username) => {

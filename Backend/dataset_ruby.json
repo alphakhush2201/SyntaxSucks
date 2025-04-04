@@ -1,0 +1,22 @@
+[
+    {
+        "english_command": "Print hello world",
+        "code": "puts \"Hello, World!\""
+    },
+    {
+        "english_command": "Create an array of numbers from 1 to 10",
+        "code": "numbers = (1..10).to_a\nputs numbers"
+    },
+    {
+        "english_command": "Create a function that adds two numbers",
+        "code": "def add_numbers(a, b)\n  a + b\nend\n\nputs add_numbers(5, 3)"
+    },
+    {
+        "english_command": "Create a class for a Person with name and age",
+        "code": "class Person\n  def initialize(name, age)\n    @name = name\n    @age = age\n  end\n  \n  def greet\n    puts \"Hello, my name is #{@name} and I am #{@age} years old.\"\n  end\nend\n\nperson = Person.new(\"John\", 30)\nperson.greet"
+    },
+    {
+        "english_command": "Create a function that finds the maximum number in an array",
+        "code": "def find_max(numbers)\n  numbers.max\nend\n\nnumbers = [4, 2, 9, 7, 5, 1]\nputs find_max(numbers)"
+    }
+] 

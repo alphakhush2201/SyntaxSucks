@@ -18,6 +18,7 @@ export const useAuth = () => {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isConfigured, setIsConfigured] = useState(true);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -27,6 +28,9 @@ export function AuthProvider({ children }) {
         setUser(currentUser);
       } catch (error) {
         console.error('Error checking authentication:', error);
+        if (error.message === 'Supabase not configured') {
+          setIsConfigured(false);
+        }
       } finally {
         setLoading(false);
       }
@@ -62,6 +66,9 @@ export function AuthProvider({ children }) {
       setUser(null);
     } catch (error) {
       console.error('Error signing out:', error.message);
+      if (error.message === 'Supabase not configured') {
+        setIsConfigured(false);
+      }
       toast.error('Error signing out');
     }
   };
@@ -72,6 +79,7 @@ export function AuthProvider({ children }) {
     loading,
     signOut,
     isAuthenticated: !!user,
+    isConfigured,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

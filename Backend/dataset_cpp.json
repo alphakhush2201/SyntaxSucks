@@ -1,0 +1,22 @@
+[
+    {
+        "english_command": "Print hello world",
+        "code": "#include <iostream>\n\nint main() {\n    std::cout << \"Hello, World!\" << std::endl;\n    return 0;\n}"
+    },
+    {
+        "english_command": "Create an array of numbers from 1 to 10",
+        "code": "#include <iostream>\n#include <vector>\n\nint main() {\n    std::vector<int> numbers(10);\n    for(int i = 0; i < 10; i++) {\n        numbers[i] = i + 1;\n    }\n    for(int num : numbers) {\n        std::cout << num << \" \";\n    }\n    std::cout << std::endl;\n    return 0;\n}"
+    },
+    {
+        "english_command": "Create a function that adds two numbers",
+        "code": "#include <iostream>\n\nint addNumbers(int a, int b) {\n    return a + b;\n}\n\nint main() {\n    std::cout << addNumbers(5, 3) << std::endl;\n    return 0;\n}"
+    },
+    {
+        "english_command": "Create a class for a Person with name and age",
+        "code": "#include <iostream>\n#include <string>\n\nclass Person {\nprivate:\n    std::string name;\n    int age;\n\npublic:\n    Person(const std::string& n, int a) : name(n), age(a) {}\n    \n    void greet() const {\n        std::cout << \"Hello, my name is \" << name << \" and I am \" << age << \" years old.\" << std::endl;\n    }\n};\n\nint main() {\n    Person person(\"John\", 30);\n    person.greet();\n    return 0;\n}"
+    },
+    {
+        "english_command": "Create a function that finds the maximum number in an array",
+        "code": "#include <iostream>\n#include <vector>\n#include <algorithm>\n\nint findMax(const std::vector<int>& numbers) {\n    return *std::max_element(numbers.begin(), numbers.end());\n}\n\nint main() {\n    std::vector<int> numbers = {4, 2, 9, 7, 5, 1};\n    std::cout << findMax(numbers) << std::endl;\n    return 0;\n}"
+    }
+] 

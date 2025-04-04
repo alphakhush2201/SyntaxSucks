@@ -1,92 +1,122 @@
-# SyntaxSucks - English to Python Converter
+# SyntaxSucks
 
-SyntaxSucks is an application that converts English instructions to Python code using AI. It features user authentication with Supabase for secure storage of user credentials and history.
+SyntaxSucks is an AI-powered code generation platform that converts English instructions into multiple programming languages. The platform supports Python, JavaScript, Java, C++, and Ruby with both code generation and execution capabilities.
 
-## Features
+## Live Demo
+Frontend: https://syntaxsucks.vercel.app  
+API: https://syntaxsucks-api.onrender.com
 
-- Convert English instructions to Python code
-- Execute Python code and view output
-- Save conversion history
-- User authentication with Supabase
-- Rate limiting based on authentication status
+## System Requirements
 
-## Setup
+### Development
+- Node.js 18+ for frontend development
+- Python 3.11+ for backend development
 
-### Prerequisites
-
-- Node.js (v14 or higher)
-- Python (v3.8 or higher)
-- Supabase account
-
-### Supabase Setup
-
-1. Create a new project in Supabase
-2. Go to SQL Editor and run the SQL commands in `Backend/supabase_schema.sql`
-3. Go to Settings > API and copy your project URL and anon key
-4. Update the `.env` files in both Frontend and Backend directories with your Supabase credentials
-
-### Backend Setup
-
-```bash
-cd Backend
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
-
-### Frontend Setup
-
-```bash
-cd FrontEnd
-npm install
-npm run dev
-```
+### Required Software
+For local development, you'll need:
+- Node.js 18+
+- Python 3.11+
+- JDK 11+ (for Java execution)
+- G++ compiler (for C++ execution)
+- Ruby interpreter (for Ruby execution)
 
 ## Environment Variables
 
 ### Frontend (.env)
-
-```
-VITE_SUPABASE_URL=your-supabase-project-url
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+```env
+VITE_API_URL=https://syntaxsucks-api.onrender.com
 ```
 
 ### Backend (.env)
-
+```env
+GEMINI_API_KEY=your_gemini_api_key
+JWT_SECRET_KEY=your_jwt_secret
+CORS_ORIGINS=https://syntaxsucks.vercel.app
+DEBUG=false
 ```
-SUPABASE_URL=your-supabase-project-url
-SUPABASE_KEY=your-supabase-anon-key
+
+## Development Setup
+
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/yourusername/syntaxsucks.git
+   cd syntaxsucks
+   ```
+
+2. **Frontend Setup**
+   ```bash
+   cd FrontEnd
+   npm install
+   npm run dev
+   ```
+
+3. **Backend Setup**
+   ```bash
+   cd Backend
+   pip install -r requirements.txt
+   uvicorn main:app --reload
+   ```
+
+## Deployment
+
+### Frontend (Vercel)
+1. Push your changes to GitHub
+2. Connect your repository to Vercel
+3. Set the following build configurations:
+   - Framework Preset: Vite
+   - Build Command: `npm run build`
+   - Output Directory: `dist`
+   - Install Command: `npm install`
+4. Add environment variables in Vercel project settings
+
+### Backend (Render)
+1. Push your changes to GitHub
+2. Connect your repository to Render
+3. Create a new Web Service
+4. Select the Backend directory
+5. Set the following configuration:
+   - Environment: Python
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+6. Add environment variables in Render project settings
+
+## API Documentation
+
+### Convert English to Code
+```http
+POST /convert
+{
+    "instructions": "Your English instructions",
+    "language": "python" // or "javascript", "java", "cpp", "ruby"
+}
 ```
 
-## Authentication Flow
+### Execute Code
+```http
+POST /run
+{
+    "code": "Your code",
+    "language": "python" // or "javascript", "java", "cpp", "ruby"
+}
+```
 
-1. Users can sign up with email, password, and username
-2. User credentials are securely stored in Supabase Auth
-3. Additional user data is stored in the profiles table
-4. Authenticated users get higher rate limits and can save their conversion history
-5. Row Level Security (RLS) ensures users can only access their own data
+## Security Features
 
-## Database Schema
+1. **API Rate Limiting**
+   - Anonymous users: 50 requests per day
+   - Authenticated users: 500 requests per day
 
-### Profiles Table
+2. **Code Execution Security**
+   - All code is executed in isolated environments
+   - Memory and CPU limits are enforced
+   - Network access is restricted
+   - Execution timeout: 30 seconds
 
-- id: UUID (references auth.users)
-- username: TEXT
-- created_at: TIMESTAMP
-- updated_at: TIMESTAMP
+## Support and Updates
 
-### History Table
+- Report issues: https://github.com/yourusername/syntaxsucks/issues
+- Email support: support@syntaxsucks.com
 
-- id: UUID
-- user_id: UUID (references auth.users)
-- instructions: TEXT
-- python_code: TEXT
-- output: TEXT (optional)
-- error: TEXT (optional)
-- created_at: TIMESTAMP
+## License
 
-## Security
-
-- User passwords are securely hashed and stored by Supabase Auth
-- Row Level Security (RLS) policies ensure data isolation
-- JWT tokens are used for API authentication
-- Rate limiting protects against abuse
+MIT License - see LICENSE file for details

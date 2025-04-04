@@ -1,0 +1,22 @@
+[
+    {
+        "english_command": "Print hello world",
+        "code": "console.log('Hello, World!');"
+    },
+    {
+        "english_command": "Create an array of numbers from 1 to 10",
+        "code": "const numbers = Array.from({length: 10}, (_, i) => i + 1);\nconsole.log(numbers);"
+    },
+    {
+        "english_command": "Create a function that adds two numbers",
+        "code": "function addNumbers(a, b) {\n    return a + b;\n}\n\nconsole.log(addNumbers(5, 3));"
+    },
+    {
+        "english_command": "Create a class for a Person with name and age",
+        "code": "class Person {\n    constructor(name, age) {\n        this.name = name;\n        this.age = age;\n    }\n    \n    greet() {\n        console.log(`Hello, my name is ${this.name} and I am ${this.age} years old.`);\n    }\n}\n\nconst person = new Person('John', 30);\nperson.greet();"
+    },
+    {
+        "english_command": "Create a function that finds the maximum number in an array",
+        "code": "function findMax(numbers) {\n    return Math.max(...numbers);\n}\n\nconst numbers = [4, 2, 9, 7, 5, 1];\nconsole.log(findMax(numbers));"
+    }
+] 
